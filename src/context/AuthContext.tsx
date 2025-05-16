@@ -29,19 +29,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Check active sessions and set the user
     const getSession = async () => {
       setLoading(true);
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Error getting session:', error);
-        toast.error('Authentication error. Please try again.');
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          toast.error('Authentication error. Please try again.');
+        }
+        
+        if (session) {
+          const { data: { user } } = await supabase.auth.getUser();
+          setUser(user);
+          console.log("User authenticated:", user.email);
+        } else {
+          console.log("No active session found");
+        }
+      } catch (error) {
+        console.error('Session fetch error:', error);
+      } finally {
+        setLoading(false);
       }
-      
-      if (session) {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
-      }
-      
-      setLoading(false);
     };
     
     getSession();
@@ -50,8 +57,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user);
+        console.log("Auth state changed, user logged in:", session.user.email);
       } else {
         setUser(null);
+        console.log("Auth state changed, no user");
       }
       setLoading(false);
     });
@@ -70,6 +79,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       toast.success('Logged in successfully!');
     } catch (error: any) {
+      console.error("Sign in error:", error);
       toast.error(error.message || 'Error signing in');
       throw error;
     } finally {
@@ -80,12 +90,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      console.log("Signing up with:", email);
+      
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth`
+        }
+      });
       
       if (error) throw error;
       
       toast.success('Sign-up successful! Please check your email for verification.');
+      console.log("Sign up successful, verification email sent");
     } catch (error: any) {
+      console.error("Sign up error:", error);
       toast.error(error.message || 'Error signing up');
       throw error;
     } finally {
@@ -102,6 +122,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       toast.success('Logged out successfully');
     } catch (error: any) {
+      console.error("Sign out error:", error);
       toast.error(error.message || 'Error signing out');
     } finally {
       setLoading(false);

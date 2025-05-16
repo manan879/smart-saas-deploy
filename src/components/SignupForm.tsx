@@ -5,12 +5,11 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Mail, Lock, AlertTriangle, User, Check } from 'lucide-react';
+import { Mail, Lock, AlertTriangle, Check } from 'lucide-react';
 
 // Form validation schema
 const signupSchema = z.object({
@@ -40,12 +39,14 @@ export const SignupForm = () => {
     try {
       setLoading(true);
       setError(null);
+      setSuccess(null);
       
       await signUp(data.email, data.password);
       
       setSuccess("Account created successfully! Please check your email for verification.");
       form.reset();
     } catch (err: any) {
+      console.error("Signup error:", err);
       setError(err.message || "Failed to create account");
     } finally {
       setLoading(false);
@@ -57,17 +58,26 @@ export const SignupForm = () => {
       setLoading(true);
       setError(null);
       
+      console.log("Starting Google sign in");
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Google OAuth error:", error);
+        throw error;
+      }
       
       // No need to set success message for OAuth as it redirects away
     } catch (err: any) {
+      console.error("Google sign in error:", err);
       setError(err.message || "Failed to sign in with Google");
       toast.error(err.message || "Failed to sign in with Google");
     } finally {
