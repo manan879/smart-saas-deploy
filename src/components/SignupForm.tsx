@@ -41,6 +41,7 @@ export const SignupForm = () => {
       setError(null);
       setSuccess(null);
       
+      console.log("Attempting to sign up with email:", data.email);
       await signUp(data.email, data.password);
       
       setSuccess("Account created successfully! Please check your email for verification.");
@@ -75,6 +76,7 @@ export const SignupForm = () => {
         throw error;
       }
       
+      console.log("Google OAuth initiated:", data);
       // No need to set success message for OAuth as it redirects away
     } catch (err: any) {
       console.error("Google sign in error:", err);

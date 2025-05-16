@@ -73,10 +73,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log("Attempting to sign in with:", email);
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Sign in error:", error);
+        throw error;
+      }
       
+      console.log("Sign in successful:", data);
       toast.success('Logged in successfully!');
     } catch (error: any) {
       console.error("Sign in error:", error);
@@ -100,10 +105,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Sign up error:", error);
+        throw error;
+      }
       
+      console.log("Sign up successful:", data);
       toast.success('Sign-up successful! Please check your email for verification.');
-      console.log("Sign up successful, verification email sent");
     } catch (error: any) {
       console.error("Sign up error:", error);
       toast.error(error.message || 'Error signing up');

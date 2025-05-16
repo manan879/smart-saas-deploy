@@ -23,11 +23,13 @@ export const AuthForm = () => {
     try {
       setAuthLoading(true);
       setError(null);
+      console.log("Attempting to sign in with:", email);
       await signIn(email, password);
+      console.log("Sign in successful, navigating to dashboard");
       navigate('/dashboard');
     } catch (error: any) {
-      setError(error.message || "Login failed");
       console.error('Sign-in error:', error);
+      setError(error.message || "Login failed");
     } finally {
       setAuthLoading(false);
     }
@@ -38,16 +40,28 @@ export const AuthForm = () => {
       setAuthLoading(true);
       setError(null);
       
+      console.log("Starting Google sign in from login tab");
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Google OAuth error:", error);
+        throw error;
+      }
+      
+      console.log("Google OAuth initiated:", data);
+      // No success message needed as OAuth will redirect
       
     } catch (err: any) {
+      console.error("Google sign in error:", err);
       setError(err.message || "Failed to sign in with Google");
     } finally {
       setAuthLoading(false);
