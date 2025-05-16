@@ -3,9 +3,10 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
-// Replace with your Supabase URL and anon key
-const supabaseUrl = 'https://your-supabase-url.supabase.co';
-const supabaseAnonKey = 'your-supabase-anon-key';
+// Replace with your actual Supabase URL and anon key
+// These would typically come from environment variables
+const supabaseUrl = 'https://hcnzobkudvosqfzwwegg.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjbnpvYmt1ZHZvc3FmendlZ2ciLCJyb2xlIjoiYW5vbiIsImlhdCI6MTY2ODUzODI0MSwic3ViIjoiZTUzMmQ0ZmYtNWE1Yy00NWI5LTkxNmMtMWYyOGM2ZmNjNzc4In0.sFaG7o0CDJa31r1jw1c_nMVefSiWCyzaUl2JsJVP_G0';
 
 type AuthContextType = {
   isAuthenticated: boolean;
