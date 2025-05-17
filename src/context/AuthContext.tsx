@@ -1,17 +1,13 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
+import { User, Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
-
-// Replace with your actual Supabase URL and anon key
-// These would typically come from environment variables
-const supabaseUrl = 'https://hcnzobkudvosqfzwwegg.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjbnpvYmt1ZHZvc3FmendlZ2ciLCJyb2xlIjoiYW5vbiIsImlhdCI6MTY2ODUzODI0MSwic3ViIjoiZTUzMmQ0ZmYtNWE1Yy00NWI5LTkxNmMtMWYyOGM2ZmNjNzc4In0.sFaG7o0CDJa31r1jw1c_nMVefSiWCyzaUl2JsJVP_G0';
+import { supabase } from '@/integrations/supabase/client';
 
 type AuthContextType = {
   isAuthenticated: boolean;
-  user: any | null;
-  supabase: SupabaseClient;
+  user: User | null;
+  supabase: typeof supabase;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -21,26 +17,40 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [supabase] = useState(() => createClient(supabaseUrl, supabaseAnonKey));
 
   useEffect(() => {
-    // Check active sessions and set the user
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("Auth state changed event:", event);
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Don't put any async Supabase calls here to prevent deadlocks
+        if (session?.user) {
+          console.log("User authenticated:", session.user.email);
+        } else {
+          console.log("Auth state changed, no user");
+        }
+      }
+    );
+
+    // THEN check for existing session
     const getSession = async () => {
-      setLoading(true);
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
-          toast.error('Authentication error. Please try again.');
         }
         
         if (session) {
-          const { data: { user } } = await supabase.auth.getUser();
-          setUser(user);
-          console.log("User authenticated:", user.email);
+          setSession(session);
+          setUser(session.user);
+          console.log("Active session found:", session.user.email);
         } else {
           console.log("No active session found");
         }
@@ -53,22 +63,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     getSession();
     
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        console.log("Auth state changed, user logged in:", session.user.email);
-      } else {
-        setUser(null);
-        console.log("Auth state changed, no user");
-      }
-      setLoading(false);
-    });
-    
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, []);
   
   const signIn = async (email: string, password: string) => {
     try {

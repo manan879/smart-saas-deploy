@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SignupForm } from '@/components/SignupForm';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -12,16 +12,16 @@ import { Mail, Lock, AlertTriangle } from 'lucide-react';
 
 export const AuthForm = () => {
   const navigate = useNavigate();
-  const { signIn, supabase, loading } = useAuth();
+  const { signIn, supabase, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      setAuthLoading(true);
+      setLocalLoading(true);
       setError(null);
       console.log("Attempting to sign in with:", email);
       await signIn(email, password);
@@ -31,13 +31,13 @@ export const AuthForm = () => {
       console.error('Sign-in error:', error);
       setError(error.message || "Login failed");
     } finally {
-      setAuthLoading(false);
+      setLocalLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
     try {
-      setAuthLoading(true);
+      setLocalLoading(true);
       setError(null);
       
       console.log("Starting Google sign in from login tab");
@@ -64,9 +64,11 @@ export const AuthForm = () => {
       console.error("Google sign in error:", err);
       setError(err.message || "Failed to sign in with Google");
     } finally {
-      setAuthLoading(false);
+      setLocalLoading(false);
     }
   };
+  
+  const loading = localLoading || authLoading;
   
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
@@ -101,7 +103,7 @@ export const AuthForm = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      disabled={authLoading || loading}
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -116,16 +118,16 @@ export const AuthForm = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      disabled={authLoading || loading}
+                      disabled={loading}
                     />
                   </div>
                 </div>
                 <Button 
                   type="submit" 
                   className="w-full bg-primary hover:bg-primary/90"
-                  disabled={authLoading || loading}
+                  disabled={loading}
                 >
-                  {(authLoading || loading) ? 'Signing in...' : 'Sign In'}
+                  {loading ? 'Signing in...' : 'Sign In'}
                 </Button>
 
                 <div className="relative">
@@ -141,7 +143,7 @@ export const AuthForm = () => {
                   type="button" 
                   variant="outline" 
                   onClick={handleGoogleSignIn}
-                  disabled={authLoading || loading}
+                  disabled={loading}
                   className="w-full"
                 >
                   <svg
