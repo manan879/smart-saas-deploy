@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -9,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
+import { DownloadInvoiceButton } from '@/components/InvoicePdfGenerator';
 
 // Invoice item type
 interface InvoiceItem {
@@ -49,6 +49,9 @@ const CreateInvoice = () => {
   ]);
   const [taxRate, setTaxRate] = useState(0);
   const [notes, setNotes] = useState('');
+  
+  // State to control when PDF download is available
+  const [invoiceReady, setInvoiceReady] = useState(false);
   
   // Add a new item to the invoice
   const addItem = () => {
@@ -92,17 +95,46 @@ const CreateInvoice = () => {
     return subtotal + tax;
   };
   
+  // Prepare invoice data for PDF
+  const getInvoiceData = () => {
+    return {
+      invoiceNumber,
+      invoiceDate,
+      dueDate,
+      companyName,
+      companyAddress,
+      companyEmail,
+      companyPhone,
+      clientName,
+      clientAddress,
+      clientEmail,
+      clientPhone,
+      items,
+      taxRate,
+      notes
+    };
+  };
+  
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Basic validation
+    if (!companyName || !clientName) {
+      toast.error('Please fill in both company and client information');
+      return;
+    }
+    
+    if (items.some(item => !item.description || item.quantity <= 0)) {
+      toast.error('Please fill in all item details with valid quantities');
+      return;
+    }
+    
     // Here we would normally send the data to our backend via Supabase
-    // For now, let's just show a success message
     toast.success('Invoice created successfully!');
     
-    // You could add PDF generation and download here
-    // For now, we'll just navigate back to the dashboard
-    setTimeout(() => navigate('/dashboard'), 1500);
+    // Set invoice as ready for PDF download
+    setInvoiceReady(true);
   };
   
   if (loading) {
@@ -395,6 +427,13 @@ const CreateInvoice = () => {
             <Button type="submit" className="bg-billflow-600 hover:bg-billflow-700">
               Create Invoice
             </Button>
+            
+            {/* PDF Download Button - Only show when invoice is ready */}
+            {invoiceReady && (
+              <div className="ml-2">
+                <DownloadInvoiceButton invoiceData={getInvoiceData()} />
+              </div>
+            )}
           </div>
         </form>
       </div>

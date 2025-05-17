@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -25,6 +26,7 @@ export const SignupForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -43,8 +45,13 @@ export const SignupForm = () => {
       console.log("Attempting to sign up with email:", data.email);
       await signUp(data.email, data.password);
       
-      setSuccess("Account created successfully! Please check your email for verification.");
+      setSuccess("Account created successfully! Redirecting to invoice page...");
       form.reset();
+      
+      // Redirect to invoice page after short delay
+      setTimeout(() => {
+        navigate('/create-invoice');
+      }, 1500);
     } catch (err: any) {
       console.error("Signup error:", err);
       setError(err.message || "Failed to create account");

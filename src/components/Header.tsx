@@ -3,6 +3,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+import { User } from 'lucide-react';
 
 export const Header = () => {
   const { isAuthenticated, signOut } = useAuth();
@@ -37,6 +38,10 @@ export const Header = () => {
             <>
               <Link to="/dashboard" className="text-gray-600 hover:text-billflow-600 px-3 py-2 rounded-md text-sm font-medium">
                 Dashboard
+              </Link>
+              <Link to="/account" className="text-gray-600 hover:text-billflow-600 px-3 py-2 rounded-md text-sm font-medium">
+                <User className="h-4 w-4 inline mr-1" />
+                Account
               </Link>
               <Button 
                 onClick={handleSignOut} 
