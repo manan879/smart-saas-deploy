@@ -49,7 +49,7 @@ export const SignupForm = () => {
       setSuccess("Account created successfully! Redirecting to create invoice page...");
       form.reset();
       
-      // Redirect to invoice page after short delay
+      // Redirect to create invoice page after short delay
       setTimeout(() => {
         navigate('/create-invoice');
       }, 1500);
