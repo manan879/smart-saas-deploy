@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/context/AuthContext';
@@ -45,7 +46,7 @@ export const SignupForm = () => {
       console.log("Attempting to sign up with email:", data.email);
       await signUp(data.email, data.password);
       
-      setSuccess("Account created successfully! Redirecting to invoice page...");
+      setSuccess("Account created successfully! Redirecting to create invoice page...");
       form.reset();
       
       // Redirect to invoice page after short delay
@@ -69,7 +70,7 @@ export const SignupForm = () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${window.location.origin}/create-invoice`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -83,6 +84,7 @@ export const SignupForm = () => {
       }
       
       console.log("Google OAuth initiated:", data);
+      toast.success("Google authentication initiated");
       // No need to set success message for OAuth as it redirects away
     } catch (err: any) {
       console.error("Google sign in error:", err);

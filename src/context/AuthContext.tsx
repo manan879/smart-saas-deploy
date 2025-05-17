@@ -99,7 +99,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         email, 
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth`
+          emailRedirectTo: `${window.location.origin}/create-invoice`,
+          data: {
+            email: email
+          }
         }
       });
       
@@ -109,7 +112,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       console.log("Sign up successful:", data);
-      toast.success('Sign-up successful! Please check your email for verification.');
+      
+      // Check if email confirmation is required
+      if (data?.user?.identities?.length === 0) {
+        toast.error('This email is already registered. Please try logging in instead.');
+        throw new Error('This email is already registered');
+      } else if (data?.user && !data?.session) {
+        toast.success('Sign-up successful! Please check your email for verification.');
+      } else if (data?.session) {
+        toast.success('Account created successfully! You are now signed in.');
+      }
     } catch (error: any) {
       console.error("Sign up error:", error);
       toast.error(error.message || 'Error signing up');
