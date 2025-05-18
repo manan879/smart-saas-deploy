@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -9,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { DownloadInvoiceButton } from '@/components/InvoicePdfGenerator';
+import { supabase } from '@/integrations/supabase/client';
 
 // Invoice item type
 interface InvoiceItem {
@@ -19,7 +21,7 @@ interface InvoiceItem {
 }
 
 const CreateInvoice = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const navigate = useNavigate();
   
   // Invoice details state
@@ -50,8 +52,12 @@ const CreateInvoice = () => {
   const [taxRate, setTaxRate] = useState(0);
   const [notes, setNotes] = useState('');
   
+  // State for loading while saving to Supabase
+  const [isSaving, setIsSaving] = useState(false);
+  
   // State to control when PDF download is available
   const [invoiceReady, setInvoiceReady] = useState(false);
+  const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(null);
   
   // Add a new item to the invoice
   const addItem = () => {
@@ -115,6 +121,64 @@ const CreateInvoice = () => {
     };
   };
   
+  // Save invoice to Supabase
+  const saveInvoiceToSupabase = async () => {
+    if (!user) {
+      toast.error('You must be logged in to save an invoice');
+      return;
+    }
+    
+    try {
+      setIsSaving(true);
+      
+      const invoiceData = {
+        user_id: user.id,
+        invoice_number: invoiceNumber,
+        invoice_date: invoiceDate,
+        due_date: dueDate,
+        company_name: companyName,
+        company_address: companyAddress,
+        company_email: companyEmail,
+        company_phone: companyPhone,
+        client_name: clientName,
+        client_address: clientAddress,
+        client_email: clientEmail,
+        client_phone: clientPhone,
+        items: items,
+        subtotal: calculateSubtotal(),
+        tax_rate: taxRate,
+        tax_amount: calculateTax(),
+        total_amount: calculateTotal(),
+        notes: notes
+      };
+      
+      const { data, error } = await supabase
+        .from('invoices')
+        .insert(invoiceData)
+        .select('id')
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      setSavedInvoiceId(data.id);
+      toast.success('Invoice saved successfully!');
+      setInvoiceReady(true);
+      
+      // Redirect to invoice history after 2 seconds
+      setTimeout(() => {
+        navigate('/invoice-history');
+      }, 2000);
+      
+    } catch (error: any) {
+      console.error('Error saving invoice:', error);
+      toast.error(`Failed to save invoice: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,11 +194,8 @@ const CreateInvoice = () => {
       return;
     }
     
-    // Here we would normally send the data to our backend via Supabase
-    toast.success('Invoice created successfully!');
-    
-    // Set invoice as ready for PDF download
-    setInvoiceReady(true);
+    // Save to Supabase
+    saveInvoiceToSupabase();
   };
   
   if (loading) {
@@ -156,6 +217,9 @@ const CreateInvoice = () => {
             <p className="text-gray-500">Fill out the form below to create a new invoice</p>
           </div>
           <div className="space-x-2">
+            <Link to="/invoice-history">
+              <Button variant="outline">View Invoice History</Button>
+            </Link>
             <Link to="/dashboard">
               <Button variant="outline">Cancel</Button>
             </Link>
@@ -422,10 +486,14 @@ const CreateInvoice = () => {
           
           <div className="flex justify-end space-x-2">
             <Link to="/dashboard">
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" disabled={isSaving}>Cancel</Button>
             </Link>
-            <Button type="submit" className="bg-billflow-600 hover:bg-billflow-700">
-              Create Invoice
+            <Button 
+              type="submit" 
+              className="bg-billflow-600 hover:bg-billflow-700"
+              disabled={isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save Invoice'}
             </Button>
             
             {/* PDF Download Button - Only show when invoice is ready */}

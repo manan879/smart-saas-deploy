@@ -19,8 +19,9 @@ const AuthRedirectHandler = () => {
         navigate('/dashboard');
       }
       
-      // If user signs up, redirect to create invoice page
-      if (event === 'SIGNED_UP' && session) {
+      // If user signs up (custom event handling)
+      if (event === 'SIGNED_IN' && session?.user?.app_metadata?.provider === 'email' && 
+          new Date(session?.user?.created_at as string).getTime() > Date.now() - 60000) {
         console.log("User signed up, redirecting to create invoice");
         navigate('/create-invoice');
       }

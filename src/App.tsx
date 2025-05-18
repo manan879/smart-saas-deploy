@@ -11,6 +11,8 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import CreateInvoice from "./pages/CreateInvoice";
+import InvoiceHistory from "./pages/InvoiceHistory";
+import InvoiceDetail from "./pages/InvoiceDetail";
 import AccountManagement from "./pages/AccountManagement";
 import NotFound from "./pages/NotFound";
 
@@ -29,6 +31,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/create-invoice" element={<CreateInvoice />} />
+            <Route path="/invoice-history" element={<InvoiceHistory />} />
+            <Route path="/invoice/:id" element={<InvoiceDetail />} />
             <Route path="/account" element={<AccountManagement />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

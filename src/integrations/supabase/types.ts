@@ -9,6 +9,75 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      invoices: {
+        Row: {
+          client_address: string | null
+          client_email: string | null
+          client_name: string
+          client_phone: string | null
+          company_address: string | null
+          company_email: string | null
+          company_name: string
+          company_phone: string | null
+          created_at: string
+          due_date: string
+          id: string
+          invoice_date: string
+          invoice_number: string
+          items: Json
+          notes: string | null
+          subtotal: number
+          tax_amount: number | null
+          tax_rate: number | null
+          total_amount: number
+          user_id: string
+        }
+        Insert: {
+          client_address?: string | null
+          client_email?: string | null
+          client_name: string
+          client_phone?: string | null
+          company_address?: string | null
+          company_email?: string | null
+          company_name: string
+          company_phone?: string | null
+          created_at?: string
+          due_date: string
+          id?: string
+          invoice_date: string
+          invoice_number: string
+          items: Json
+          notes?: string | null
+          subtotal: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total_amount: number
+          user_id: string
+        }
+        Update: {
+          client_address?: string | null
+          client_email?: string | null
+          client_name?: string
+          client_phone?: string | null
+          company_address?: string | null
+          company_email?: string | null
+          company_name?: string
+          company_phone?: string | null
+          created_at?: string
+          due_date?: string
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          items?: Json
+          notes?: string | null
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total_amount?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       Users: {
         Row: {
           created_at: string
