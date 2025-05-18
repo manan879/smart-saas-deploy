@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -173,8 +174,8 @@ const InvoiceDetail = () => {
           <DownloadInvoiceButton invoiceData={invoiceData} />
         </div>
 
-        <Card>
-          <CardHeader>
+        <Card className="border-billflow-500">
+          <CardHeader className="bg-billflow-500 text-white">
             <CardTitle>Invoice #{invoice.invoice_number}</CardTitle>
           </CardHeader>
           <CardContent>

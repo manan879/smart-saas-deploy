@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -83,12 +84,12 @@ const CreateInvoice = () => {
   };
 
   const serializeInvoiceItems = (items: InvoiceItem[]) => {
-    return items.map(item => ({
+    return JSON.stringify(items.map(item => ({
       id: item.id,
       description: item.description,
       quantity: item.quantity,
       price: item.price
-    }));
+    })));
   };
 
   const handleSaveInvoice = async () => {
@@ -119,7 +120,7 @@ const CreateInvoice = () => {
         client_address: clientAddress,
         client_email: clientEmail,
         client_phone: clientPhone,
-        items: serializeInvoiceItems(items), // Serialize items to plain JSON
+        items: serializeInvoiceItems(items), // Serialize items to JSON string
         subtotal: subtotal,
         tax_rate: taxRate,
         tax_amount: taxAmount,
@@ -161,11 +162,11 @@ const CreateInvoice = () => {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <div className="container mx-auto p-4">
-        <Card>
-          <CardHeader>
+        <Card className="border-billflow-500">
+          <CardHeader className="bg-billflow-500 text-white">
             <CardTitle>Create New Invoice</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Invoice Details */}
               <div>
@@ -174,6 +175,7 @@ const CreateInvoice = () => {
                   type="text"
                   id="invoiceNumber"
                   value={invoiceNumber}
+                  className="border-billflow-300"
                   onChange={(e) => setInvoiceNumber(e.target.value)}
                 />
               </div>
@@ -183,6 +185,7 @@ const CreateInvoice = () => {
                   type="date"
                   id="invoiceDate"
                   value={invoiceDate}
+                  className="border-billflow-300"
                   onChange={(e) => setInvoiceDate(e.target.value)}
                 />
               </div>
@@ -192,6 +195,7 @@ const CreateInvoice = () => {
                   type="date"
                   id="dueDate"
                   value={dueDate}
+                  className="border-billflow-300"
                   onChange={(e) => setDueDate(e.target.value)}
                 />
               </div>
@@ -203,6 +207,7 @@ const CreateInvoice = () => {
                   type="text"
                   id="companyName"
                   value={companyName}
+                  className="border-billflow-300"
                   onChange={(e) => setCompanyName(e.target.value)}
                 />
               </div>
@@ -212,6 +217,7 @@ const CreateInvoice = () => {
                   type="text"
                   id="companyAddress"
                   value={companyAddress}
+                  className="border-billflow-300"
                   onChange={(e) => setCompanyAddress(e.target.value)}
                 />
               </div>
@@ -221,6 +227,7 @@ const CreateInvoice = () => {
                   type="email"
                   id="companyEmail"
                   value={companyEmail}
+                  className="border-billflow-300"
                   onChange={(e) => setCompanyEmail(e.target.value)}
                 />
               </div>
@@ -230,6 +237,7 @@ const CreateInvoice = () => {
                   type="tel"
                   id="companyPhone"
                   value={companyPhone}
+                  className="border-billflow-300"
                   onChange={(e) => setCompanyPhone(e.target.value)}
                 />
               </div>
@@ -241,6 +249,7 @@ const CreateInvoice = () => {
                   type="text"
                   id="clientName"
                   value={clientName}
+                  className="border-billflow-300"
                   onChange={(e) => setClientName(e.target.value)}
                 />
               </div>
@@ -250,6 +259,7 @@ const CreateInvoice = () => {
                   type="text"
                   id="clientAddress"
                   value={clientAddress}
+                  className="border-billflow-300"
                   onChange={(e) => setClientAddress(e.target.value)}
                 />
               </div>
@@ -259,6 +269,7 @@ const CreateInvoice = () => {
                   type="email"
                   id="clientEmail"
                   value={clientEmail}
+                  className="border-billflow-300"
                   onChange={(e) => setClientEmail(e.target.value)}
                 />
               </div>
@@ -268,6 +279,7 @@ const CreateInvoice = () => {
                   type="tel"
                   id="clientPhone"
                   value={clientPhone}
+                  className="border-billflow-300"
                   onChange={(e) => setClientPhone(e.target.value)}
                 />
               </div>
@@ -284,6 +296,7 @@ const CreateInvoice = () => {
                       type="text"
                       id={`description-${item.id}`}
                       value={item.description}
+                      className="border-billflow-300"
                       onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
                     />
                   </div>
@@ -293,6 +306,7 @@ const CreateInvoice = () => {
                       type="number"
                       id={`quantity-${item.id}`}
                       value={item.quantity}
+                      className="border-billflow-300"
                       onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value))}
                     />
                   </div>
@@ -302,6 +316,7 @@ const CreateInvoice = () => {
                       type="number"
                       id={`price-${item.id}`}
                       value={item.price}
+                      className="border-billflow-300"
                       onChange={(e) => handleItemChange(item.id, 'price', parseFloat(e.target.value))}
                     />
                   </div>
@@ -313,7 +328,7 @@ const CreateInvoice = () => {
                   </div>
                 </div>
               ))}
-              <Button size="sm" onClick={handleAddItem}>
+              <Button className="bg-billflow-400 hover:bg-billflow-500" size="sm" onClick={handleAddItem}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Item
               </Button>
@@ -327,6 +342,7 @@ const CreateInvoice = () => {
                   type="number"
                   id="taxRate"
                   value={taxRate}
+                  className="border-billflow-300"
                   onChange={handleTaxRateChange}
                 />
               </div>
@@ -335,6 +351,7 @@ const CreateInvoice = () => {
                 <Textarea
                   id="notes"
                   value={notes}
+                  className="border-billflow-300"
                   onChange={(e) => setNotes(e.target.value)}
                 />
               </div>

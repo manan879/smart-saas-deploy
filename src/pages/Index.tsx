@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -146,12 +145,9 @@ const Index = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-              <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-gray-200 rounded-full mr-4"></div>
-                <div>
-                  <p className="font-semibold">Sarah Thompson</p>
-                  <p className="text-sm text-gray-500">Freelance Designer</p>
-                </div>
+              <div className="mb-4">
+                <p className="font-semibold">Sarah Thompson</p>
+                <p className="text-sm text-gray-500">Freelance Designer</p>
               </div>
               <p className="text-gray-600">
                 "BillFlow has simplified my entire billing process. I can create and send professional invoices in minutes, which has helped me get paid faster."
@@ -159,12 +155,9 @@ const Index = () => {
             </div>
             
             <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-              <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-gray-200 rounded-full mr-4"></div>
-                <div>
-                  <p className="font-semibold">Michael Chen</p>
-                  <p className="text-sm text-gray-500">Small Business Owner</p>
-                </div>
+              <div className="mb-4">
+                <p className="font-semibold">Michael Chen</p>
+                <p className="text-sm text-gray-500">Small Business Owner</p>
               </div>
               <p className="text-gray-600">
                 "The invoice templates are professional and the system is so easy to use. I've saved hours each month on paperwork since switching to BillFlow."
