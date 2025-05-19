@@ -39,6 +39,10 @@ const CreateInvoice = () => {
   const [taxRate, setTaxRate] = useState<number>(0);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [subtotal, setSubtotal] = useState<number>(0);
+  const [totalAmount, setTotalAmount] = useState<number>(0);
+  const [invoiceCount, setInvoiceCount] = useState<number>(0);
+  const [userPlan, setUserPlan] = useState<string>('free');
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -57,7 +61,34 @@ const CreateInvoice = () => {
 
     // Generate a random invoice number
     setInvoiceNumber(generateInvoiceNumber());
+    
+    // Fetch user's invoice count and plan
+    if (user) {
+      fetchUserInvoiceCount();
+    }
   }, [user, isAuthenticated, loading, navigate]);
+
+  const fetchUserInvoiceCount = async () => {
+    if (user) {
+      try {
+        // Fetch user's invoice count
+        const { data: invoices, error } = await supabase
+          .from('invoices')
+          .select('id')
+          .eq('user_id', user.id);
+          
+        if (error) throw error;
+        
+        setInvoiceCount(invoices?.length || 0);
+        
+        // Fetch user's plan (assuming you'll implement this later)
+        // For now, default to free
+        setUserPlan('free');
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    }
+  };
 
   const generateInvoiceNumber = (): string => {
     const randomNumber = Math.floor(Math.random() * 10000);
@@ -83,6 +114,15 @@ const CreateInvoice = () => {
     setTaxRate(isNaN(value) ? 0 : value);
   };
 
+  // Calculate subtotal and total whenever items or tax rate changes
+  useEffect(() => {
+    const calculatedSubtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    setSubtotal(calculatedSubtotal);
+    
+    const taxAmount = calculatedSubtotal * (taxRate / 100);
+    setTotalAmount(calculatedSubtotal + taxAmount);
+  }, [items, taxRate]);
+
   const serializeInvoiceItems = (items: InvoiceItem[]) => {
     return JSON.stringify(items.map(item => ({
       id: item.id,
@@ -95,6 +135,15 @@ const CreateInvoice = () => {
   const handleSaveInvoice = async () => {
     if (!user) {
       toast.error("You must be logged in to save an invoice");
+      navigate('/auth');
+      return;
+    }
+
+    // Check invoice limits based on plan
+    const invoiceLimit = userPlan === 'free' ? 10 : userPlan === 'pro' ? 20 : 50;
+    if (invoiceCount >= invoiceLimit) {
+      toast.error(`You've reached your limit of ${invoiceLimit} invoices for your ${userPlan} plan. Please upgrade to create more.`);
+      navigate('/pricing');
       return;
     }
 
@@ -102,9 +151,7 @@ const CreateInvoice = () => {
       setSubmitting(true);
       
       // Calculate totals
-      const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
       const taxAmount = subtotal * (taxRate / 100);
-      const totalAmount = subtotal + taxAmount;
       
       // Create invoice object to save
       const invoiceData = {
@@ -120,7 +167,7 @@ const CreateInvoice = () => {
         client_address: clientAddress,
         client_email: clientEmail,
         client_phone: clientPhone,
-        items: serializeInvoiceItems(items), // Serialize items to JSON string
+        items: serializeInvoiceItems(items),
         subtotal: subtotal,
         tax_rate: taxRate,
         tax_amount: taxAmount,
@@ -138,6 +185,7 @@ const CreateInvoice = () => {
       }
       
       toast.success("Invoice saved successfully!");
+      setInvoiceCount(prevCount => prevCount + 1);
       
       // Clear form or redirect
       navigate('/invoice-history');
@@ -162,8 +210,8 @@ const CreateInvoice = () => {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <div className="container mx-auto p-4">
-        <Card className="border-billflow-500">
-          <CardHeader className="bg-billflow-500 text-white">
+        <Card className="border-blue-500">
+          <CardHeader className="bg-blue-500 text-white">
             <CardTitle>Create New Invoice</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
@@ -175,7 +223,7 @@ const CreateInvoice = () => {
                   type="text"
                   id="invoiceNumber"
                   value={invoiceNumber}
-                  className="border-billflow-300"
+                  className="border-blue-300"
                   onChange={(e) => setInvoiceNumber(e.target.value)}
                 />
               </div>
@@ -185,7 +233,7 @@ const CreateInvoice = () => {
                   type="date"
                   id="invoiceDate"
                   value={invoiceDate}
-                  className="border-billflow-300"
+                  className="border-blue-300"
                   onChange={(e) => setInvoiceDate(e.target.value)}
                 />
               </div>
@@ -195,7 +243,7 @@ const CreateInvoice = () => {
                   type="date"
                   id="dueDate"
                   value={dueDate}
-                  className="border-billflow-300"
+                  className="border-blue-300"
                   onChange={(e) => setDueDate(e.target.value)}
                 />
               </div>
@@ -207,7 +255,7 @@ const CreateInvoice = () => {
                   type="text"
                   id="companyName"
                   value={companyName}
-                  className="border-billflow-300"
+                  className="border-blue-300"
                   onChange={(e) => setCompanyName(e.target.value)}
                 />
               </div>
@@ -217,7 +265,7 @@ const CreateInvoice = () => {
                   type="text"
                   id="companyAddress"
                   value={companyAddress}
-                  className="border-billflow-300"
+                  className="border-blue-300"
                   onChange={(e) => setCompanyAddress(e.target.value)}
                 />
               </div>
@@ -227,7 +275,7 @@ const CreateInvoice = () => {
                   type="email"
                   id="companyEmail"
                   value={companyEmail}
-                  className="border-billflow-300"
+                  className="border-blue-300"
                   onChange={(e) => setCompanyEmail(e.target.value)}
                 />
               </div>
@@ -237,7 +285,7 @@ const CreateInvoice = () => {
                   type="tel"
                   id="companyPhone"
                   value={companyPhone}
-                  className="border-billflow-300"
+                  className="border-blue-300"
                   onChange={(e) => setCompanyPhone(e.target.value)}
                 />
               </div>
@@ -249,7 +297,7 @@ const CreateInvoice = () => {
                   type="text"
                   id="clientName"
                   value={clientName}
-                  className="border-billflow-300"
+                  className="border-blue-300"
                   onChange={(e) => setClientName(e.target.value)}
                 />
               </div>
@@ -259,7 +307,7 @@ const CreateInvoice = () => {
                   type="text"
                   id="clientAddress"
                   value={clientAddress}
-                  className="border-billflow-300"
+                  className="border-blue-300"
                   onChange={(e) => setClientAddress(e.target.value)}
                 />
               </div>
@@ -269,7 +317,7 @@ const CreateInvoice = () => {
                   type="email"
                   id="clientEmail"
                   value={clientEmail}
-                  className="border-billflow-300"
+                  className="border-blue-300"
                   onChange={(e) => setClientEmail(e.target.value)}
                 />
               </div>
@@ -279,7 +327,7 @@ const CreateInvoice = () => {
                   type="tel"
                   id="clientPhone"
                   value={clientPhone}
-                  className="border-billflow-300"
+                  className="border-blue-300"
                   onChange={(e) => setClientPhone(e.target.value)}
                 />
               </div>
@@ -296,7 +344,7 @@ const CreateInvoice = () => {
                       type="text"
                       id={`description-${item.id}`}
                       value={item.description}
-                      className="border-billflow-300"
+                      className="border-blue-300"
                       onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
                     />
                   </div>
@@ -306,7 +354,7 @@ const CreateInvoice = () => {
                       type="number"
                       id={`quantity-${item.id}`}
                       value={item.quantity}
-                      className="border-billflow-300"
+                      className="border-blue-300"
                       onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value))}
                     />
                   </div>
@@ -316,7 +364,7 @@ const CreateInvoice = () => {
                       type="number"
                       id={`price-${item.id}`}
                       value={item.price}
-                      className="border-billflow-300"
+                      className="border-blue-300"
                       onChange={(e) => handleItemChange(item.id, 'price', parseFloat(e.target.value))}
                     />
                   </div>
@@ -328,22 +376,42 @@ const CreateInvoice = () => {
                   </div>
                 </div>
               ))}
-              <Button className="bg-billflow-400 hover:bg-billflow-500" size="sm" onClick={handleAddItem}>
+              <Button className="bg-blue-400 hover:bg-blue-500" size="sm" onClick={handleAddItem}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Item
               </Button>
             </div>
 
-            {/* Tax Rate and Notes */}
+            {/* Subtotal, Tax Rate, Total and Notes */}
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="subtotal">Subtotal</Label>
+                <Input
+                  type="text"
+                  id="subtotal"
+                  value={`$${subtotal.toFixed(2)}`}
+                  className="border-blue-300 bg-gray-50"
+                  readOnly
+                />
+              </div>
               <div>
                 <Label htmlFor="taxRate">Tax Rate (%)</Label>
                 <Input
                   type="number"
                   id="taxRate"
                   value={taxRate}
-                  className="border-billflow-300"
+                  className="border-blue-300"
                   onChange={handleTaxRateChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="totalAmount">Total Amount</Label>
+                <Input
+                  type="text"
+                  id="totalAmount"
+                  value={`$${totalAmount.toFixed(2)}`}
+                  className="border-blue-300 bg-gray-50 font-bold"
+                  readOnly
                 />
               </div>
               <div>
@@ -351,7 +419,7 @@ const CreateInvoice = () => {
                 <Textarea
                   id="notes"
                   value={notes}
-                  className="border-billflow-300"
+                  className="border-blue-300"
                   onChange={(e) => setNotes(e.target.value)}
                 />
               </div>
@@ -360,7 +428,7 @@ const CreateInvoice = () => {
             {/* Save Button */}
             <div className="mt-6">
               <Button
-                className="bg-billflow-600 hover:bg-billflow-700"
+                className="bg-blue-600 hover:bg-blue-700"
                 onClick={handleSaveInvoice}
                 disabled={submitting}
               >

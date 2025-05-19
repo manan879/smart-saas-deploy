@@ -34,6 +34,8 @@ interface InvoiceData {
   items: InvoiceItem[];
   taxRate: number;
   notes: string;
+  subtotal: number;
+  totalAmount: number;
 }
 
 type Invoice = {
@@ -51,6 +53,9 @@ type Invoice = {
   client_phone: string;
   items: any;
   tax_rate: number;
+  tax_amount: number;
+  subtotal: number;
+  total_amount: number;
   notes: string;
 };
 
@@ -158,7 +163,9 @@ const InvoiceDetail = () => {
     clientPhone: invoice?.client_phone || '',
     items: parseInvoiceItems(invoice?.items),
     taxRate: Number(invoice?.tax_rate) || 0,
-    notes: invoice?.notes || ''
+    notes: invoice?.notes || '',
+    subtotal: Number(invoice?.subtotal) || 0,
+    totalAmount: Number(invoice?.total_amount) || 0
   };
 
   return (
@@ -174,8 +181,8 @@ const InvoiceDetail = () => {
           <DownloadInvoiceButton invoiceData={invoiceData} />
         </div>
 
-        <Card className="border-billflow-500">
-          <CardHeader className="bg-billflow-500 text-white">
+        <Card className="border-blue-500">
+          <CardHeader className="bg-blue-500 text-white">
             <CardTitle>Invoice #{invoice.invoice_number}</CardTitle>
           </CardHeader>
           <CardContent>
@@ -209,20 +216,50 @@ const InvoiceDetail = () => {
                   <p>Due Date: {format(new Date(invoice.due_date), 'MMM dd, yyyy')}</p>
                 </div>
 
-                <div>
+                <div className="mb-4">
                   <h2 className="text-lg font-semibold mb-2">Items</h2>
-                  <ul>
-                    {parseInvoiceItems(invoice.items).map((item) => (
-                      <li key={item.id} className="mb-2">
-                        {item.description} - Quantity: {item.quantity}, Price: ${item.price.toFixed(2)}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-2 text-left">Description</th>
+                          <th className="px-4 py-2 text-right">Quantity</th>
+                          <th className="px-4 py-2 text-right">Price</th>
+                          <th className="px-4 py-2 text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parseInvoiceItems(invoice.items).map((item) => (
+                          <tr key={item.id} className="border-b">
+                            <td className="px-4 py-2">{item.description}</td>
+                            <td className="px-4 py-2 text-right">{item.quantity}</td>
+                            <td className="px-4 py-2 text-right">${item.price.toFixed(2)}</td>
+                            <td className="px-4 py-2 text-right">${(item.quantity * item.price).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="mt-4 border-t pt-4">
+                  <div className="flex justify-between mb-2">
+                    <span className="font-semibold">Subtotal:</span>
+                    <span>${invoice.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span className="font-semibold">Tax ({invoice.tax_rate}%):</span>
+                    <span>${invoice.tax_amount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total:</span>
+                    <span>${invoice.total_amount.toFixed(2)}</span>
+                  </div>
                 </div>
 
                 <div className="mt-4">
                   <h2 className="text-lg font-semibold mb-2">Notes</h2>
-                  <p>{invoice.notes || 'No notes provided.'}</p>
+                  <p className="p-3 bg-gray-50 rounded">{invoice.notes || 'No notes provided.'}</p>
                 </div>
               </div>
             )}
