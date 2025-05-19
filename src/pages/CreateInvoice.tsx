@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,9 @@ import { toast } from 'sonner';
 import { Plus, Trash } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
+import { InvoiceLimitWarning } from '@/components/InvoiceLimitWarning';
+import { getUserPlan, canCreateMoreInvoices, PLAN_LIMITS } from '@/utils/subscriptionUtils';
+import { useQuery } from '@tanstack/react-query';
 
 type InvoiceItem = {
   id: string;
@@ -23,6 +26,8 @@ type InvoiceItem = {
 const CreateInvoice = () => {
   const { user, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const templateId = location.state?.templateId;
 
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
@@ -41,8 +46,33 @@ const CreateInvoice = () => {
   const [submitting, setSubmitting] = useState(false);
   const [subtotal, setSubtotal] = useState<number>(0);
   const [totalAmount, setTotalAmount] = useState<number>(0);
-  const [invoiceCount, setInvoiceCount] = useState<number>(0);
-  const [userPlan, setUserPlan] = useState<string>('free');
+
+  // Get user's plan and invoice count
+  const { data: userPlanData, isLoading: loadingPlan } = useQuery({
+    queryKey: ['userPlan', user?.id],
+    queryFn: async () => {
+      if (!user) return { plan: 'free', invoiceCount: 0, canCreate: false };
+      
+      const plan = await getUserPlan(user.id);
+      
+      const { count, error } = await supabase
+        .from('invoices')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      const invoiceCount = count || 0;
+      const canCreate = await canCreateMoreInvoices(user.id, invoiceCount);
+      
+      return { plan, invoiceCount, canCreate };
+    },
+    enabled: !!user
+  });
+
+  const userPlan = userPlanData?.plan || 'free';
+  const invoiceCount = userPlanData?.invoiceCount || 0;
+  const canCreateMore = userPlanData?.canCreate || false;
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -62,31 +92,27 @@ const CreateInvoice = () => {
     // Generate a random invoice number
     setInvoiceNumber(generateInvoiceNumber());
     
-    // Fetch user's invoice count and plan
-    if (user) {
-      fetchUserInvoiceCount();
+    // If a template was selected, apply it
+    if (templateId) {
+      applyTemplate(templateId);
     }
-  }, [user, isAuthenticated, loading, navigate]);
+  }, [user, isAuthenticated, loading, navigate, templateId]);
 
-  const fetchUserInvoiceCount = async () => {
-    if (user) {
-      try {
-        // Fetch user's invoice count
-        const { data: invoices, error } = await supabase
-          .from('invoices')
-          .select('id')
-          .eq('user_id', user.id);
-          
-        if (error) throw error;
-        
-        setInvoiceCount(invoices?.length || 0);
-        
-        // Fetch user's plan (assuming you'll implement this later)
-        // For now, default to free
-        setUserPlan('free');
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
+  const applyTemplate = (template: string) => {
+    // This is a placeholder function that would apply template-specific defaults
+    // For now, we'll just set some sample data based on the template ID
+    switch (template) {
+      case 'standard':
+        setNotes('Thank you for your business!');
+        break;
+      case 'modern':
+        setNotes('Payment due within 30 days of invoice date.');
+        break;
+      case 'creative':
+        setNotes('Custom work by creative professionals.');
+        break;
+      default:
+        break;
     }
   };
 
@@ -139,10 +165,9 @@ const CreateInvoice = () => {
       return;
     }
 
-    // Check invoice limits based on plan
-    const invoiceLimit = userPlan === 'free' ? 10 : userPlan === 'pro' ? 20 : 50;
-    if (invoiceCount >= invoiceLimit) {
-      toast.error(`You've reached your limit of ${invoiceLimit} invoices for your ${userPlan} plan. Please upgrade to create more.`);
+    // Check if user can create more invoices
+    if (!canCreateMore) {
+      toast.error(`You've reached your limit of ${PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS]} invoices for your ${userPlan} plan. Please upgrade to create more.`);
       navigate('/pricing');
       return;
     }
@@ -178,17 +203,18 @@ const CreateInvoice = () => {
       // Save to Supabase
       const { data, error } = await supabase
         .from('invoices')
-        .insert(invoiceData);
+        .insert(invoiceData)
+        .select()
+        .single();
       
       if (error) {
         throw error;
       }
       
       toast.success("Invoice saved successfully!");
-      setInvoiceCount(prevCount => prevCount + 1);
       
-      // Clear form or redirect
-      navigate('/invoice-history');
+      // Redirect to the invoice detail page for the new invoice
+      navigate(`/invoice/${data.id}`);
       
     } catch (error: any) {
       console.error("Error saving invoice:", error);
@@ -198,7 +224,7 @@ const CreateInvoice = () => {
     }
   };
 
-  if (loading) {
+  if (loading || loadingPlan) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
@@ -210,6 +236,13 @@ const CreateInvoice = () => {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <div className="container mx-auto p-4">
+        {userPlanData && (
+          <InvoiceLimitWarning 
+            currentPlan={userPlan} 
+            invoiceCount={invoiceCount} 
+          />
+        )}
+        
         <Card className="border-blue-500">
           <CardHeader className="bg-blue-500 text-white">
             <CardTitle>Create New Invoice</CardTitle>
@@ -430,7 +463,7 @@ const CreateInvoice = () => {
               <Button
                 className="bg-blue-600 hover:bg-blue-700"
                 onClick={handleSaveInvoice}
-                disabled={submitting}
+                disabled={submitting || !canCreateMore}
               >
                 {submitting ? 'Saving...' : 'Save Invoice'}
               </Button>

@@ -15,6 +15,7 @@ import InvoiceHistory from "./pages/InvoiceHistory";
 import InvoiceDetail from "./pages/InvoiceDetail";
 import AccountManagement from "./pages/AccountManagement";
 import Pricing from "./pages/Pricing";
+import Features from "./pages/Features";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/invoice/:id" element={<InvoiceDetail />} />
             <Route path="/account" element={<AccountManagement />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/features" element={<Features />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -3,11 +3,24 @@ import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+import { getUserPlan } from '@/utils/subscriptionUtils';
+import { useQuery } from '@tanstack/react-query';
+import { Badge } from '@/components/ui/badge';
 
 export const Header = () => {
-  const { isAuthenticated, signOut } = useAuth();
+  const { isAuthenticated, signOut, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Get user's plan
+  const { data: userPlan = 'free' } = useQuery({
+    queryKey: ['userPlan', user?.id],
+    queryFn: async () => {
+      if (!user) return 'free';
+      return getUserPlan(user.id);
+    },
+    enabled: !!user && isAuthenticated
+  });
   
   const handleSignOut = async () => {
     await signOut();
@@ -62,11 +75,27 @@ export const Header = () => {
                 Dashboard
               </Link>
             )}
+            
+            {isAuthenticated && (
+              <Link 
+                to="/invoice-history" 
+                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                  location.pathname === '/invoice-history' ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'
+                }`}
+              >
+                Invoices
+              </Link>
+            )}
           </nav>
 
           <div className="flex items-center space-x-2">
             {isAuthenticated ? (
               <>
+                {userPlan !== 'free' && (
+                  <Badge variant="outline" className="mr-2 border-blue-500 text-blue-600">
+                    {userPlan.charAt(0).toUpperCase() + userPlan.slice(1)}
+                  </Badge>
+                )}
                 <Link 
                   to="/account" 
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
