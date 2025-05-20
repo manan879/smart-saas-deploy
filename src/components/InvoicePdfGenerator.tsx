@@ -108,7 +108,7 @@ interface InvoiceItem {
   price: number;
 }
 
-interface InvoiceData {
+export interface InvoiceData {
   invoiceNumber: string;
   invoiceDate: string;
   dueDate: string;
@@ -262,6 +262,62 @@ export const DownloadInvoiceButton = ({ invoiceData }: { invoiceData: InvoiceDat
           <File className="mr-2 h-4 w-4" />
           {loading ? 'Generating PDF...' : 'Download PDF'}
         </Button>
+      )}
+    </PDFDownloadLink>
+  );
+};
+
+// Export a component that wraps the download functionality
+export const InvoicePdfGenerator = ({ 
+  children, 
+  invoiceData 
+}: { 
+  children?: React.ReactNode;
+  invoiceData: any;
+}) => {
+  // Map from database invoice to PDF invoice format
+  const mappedInvoiceData: InvoiceData = {
+    invoiceNumber: invoiceData.invoice_number,
+    invoiceDate: new Date(invoiceData.invoice_date).toLocaleDateString(),
+    dueDate: new Date(invoiceData.due_date).toLocaleDateString(),
+    companyName: invoiceData.company_name || '',
+    companyAddress: invoiceData.company_address || '',
+    companyEmail: invoiceData.company_email || '',
+    companyPhone: invoiceData.company_phone || '',
+    clientName: invoiceData.client_name || '',
+    clientAddress: invoiceData.client_address || '',
+    clientEmail: invoiceData.client_email || '',
+    clientPhone: invoiceData.client_phone || '',
+    items: Array.isArray(invoiceData.line_items) 
+      ? invoiceData.line_items.map((item: any) => ({
+          id: item.id || Math.random().toString(),
+          description: item.description || '',
+          quantity: Number(item.quantity) || 0,
+          price: Number(item.price) || 0
+        }))
+      : [],
+    taxRate: Number(invoiceData.tax_rate) || 0,
+    notes: invoiceData.notes || '',
+  };
+  
+  const filename = `invoice-${mappedInvoiceData.invoiceNumber}.pdf`;
+  
+  return (
+    <PDFDownloadLink
+      document={<InvoicePDF data={mappedInvoiceData} />}
+      fileName={filename}
+      className="inline-block"
+    >
+      {({ loading }) => (
+        children || (
+          <Button 
+            className="bg-billflow-600 hover:bg-billflow-700 flex items-center"
+            disabled={loading}
+          >
+            <File className="mr-2 h-4 w-4" />
+            {loading ? 'Generating PDF...' : 'Download PDF'}
+          </Button>
+        )
       )}
     </PDFDownloadLink>
   );

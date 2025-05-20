@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -80,7 +81,16 @@ const InvoiceDetail = () => {
           return;
         }
         
-        setInvoice(data);
+        // Transform database items to line_items for compatibility
+        const invoice: Invoice = {
+          ...data,
+          line_items: Array.isArray(data.items) ? data.items : [],
+          discount_rate: 0,
+          discount_amount: 0,
+          terms: data.terms || ''
+        };
+        
+        setInvoice(invoice);
       } catch (err: any) {
         console.error('Error fetching invoice:', err);
         setError(err.message || 'Failed to fetch invoice');
@@ -142,12 +152,14 @@ const InvoiceDetail = () => {
               </div>
               
               <div className="space-x-2">
-                <Link to={`/create-invoice?invoiceId=${invoice.id}`}>
-                  <Button variant="outline">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Invoice
-                  </Button>
-                </Link>
+                {userPlan !== 'free' && (
+                  <Link to={`/create-invoice?invoiceId=${invoice.id}`}>
+                    <Button variant="outline">
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Invoice
+                    </Button>
+                  </Link>
+                )}
                 <InvoicePdfGenerator invoiceData={invoice}>
                   <Button>
                     <Printer className="h-4 w-4 mr-2" />
@@ -156,7 +168,7 @@ const InvoiceDetail = () => {
                 </InvoicePdfGenerator>
                 <InvoicePdfGenerator invoiceData={invoice}>
                   <Button variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
+                    <File className="h-4 w-4 mr-2" />
                     Download PDF
                   </Button>
                 </InvoicePdfGenerator>
