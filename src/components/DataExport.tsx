@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Download, FileJson, FileSpreadsheet, FilePdf } from 'lucide-react';
+import { Download, FileJson, FileText, File } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
@@ -110,7 +110,7 @@ export const DataExport = () => {
             onClick={() => exportData('csv')}
             className="flex flex-col items-center justify-center h-24 space-y-2"
           >
-            <FileSpreadsheet className="h-8 w-8" />
+            <File className="h-8 w-8" />
             <span>CSV</span>
           </Button>
           <Button
@@ -119,7 +119,7 @@ export const DataExport = () => {
             onClick={() => exportData('pdf')}
             className="flex flex-col items-center justify-center h-24 space-y-2"
           >
-            <FilePdf className="h-8 w-8" />
+            <FileText className="h-8 w-8" />
             <span>PDF (All)</span>
           </Button>
         </div>
