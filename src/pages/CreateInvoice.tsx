@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Plus, Trash, CreditCard } from 'lucide-react';
+import { Plus, Trash, CreditCard, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceLimitWarning } from '@/components/InvoiceLimitWarning';
@@ -49,6 +49,8 @@ const CreateInvoice = () => {
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [isEditing, setIsEditing] = useState(false);
   const [showPaymentGateway, setShowPaymentGateway] = useState(false);
+  const [savedInvoice, setSavedInvoice] = useState<any>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   // Get user's plan and invoice count
   const { data: userPlanData, isLoading: loadingPlan } = useQuery({
@@ -280,6 +282,9 @@ const CreateInvoice = () => {
       
       toast.success(isEditing ? "Invoice updated successfully!" : "Invoice saved successfully!");
       
+      // Store the saved invoice data
+      setSavedInvoice(data);
+      
       // Show payment option after saving
       if (data) {
         setShowPaymentGateway(true);
@@ -296,27 +301,53 @@ const CreateInvoice = () => {
     }
   };
 
-  const handleProceedToPayment = () => {
-    // Create Lemon Squeezy checkout session
-    const checkoutParams = {
-      invoiceNumber,
-      amount: totalAmount,
-      customerEmail: clientEmail,
-      customerName: clientName,
-      description: `Invoice #${invoiceNumber}`
-    };
+  const handleProceedToPayment = async () => {
+    if (!savedInvoice) {
+      toast.error("No invoice data available for payment");
+      return;
+    }
 
-    // Redirect to a simulated Lemon Squeezy checkout
-    // In a real integration, you would use their API to create a checkout session
-    toast.success("Redirecting to payment gateway...");
-    
-    // This is a placeholder for the actual Lemon Squeezy integration
-    // Normally you would call their API and get a checkout URL
-    setTimeout(() => {
-      const lemonSqueezyUrl = `https://checkout.lemonsqueezy.com/checkout?invoice=${invoiceNumber}&amount=${totalAmount}`;
-      window.open(lemonSqueezyUrl, '_blank');
+    try {
+      setProcessingPayment(true);
+      toast.info("Creating payment checkout...");
+
+      // Call our Supabase Edge Function to create a checkout
+      const response = await fetch(
+        "https://tqevlvoleqfbubapnubp.supabase.co/functions/v1/create-checkout",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${await supabase.auth.getSession().then(res => res.data.session?.access_token)}`
+          },
+          body: JSON.stringify({
+            invoiceData: savedInvoice
+          })
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.url) {
+        throw new Error(result.error || "Failed to create checkout session");
+      }
+
+      // Open the Lemon Squeezy checkout URL in a new tab
+      toast.success("Redirecting to payment gateway...");
+      window.open(result.url, '_blank');
+
+      // Reset the payment gateway state
       setShowPaymentGateway(false);
-    }, 1000);
+      
+      // Navigate to the invoice detail page
+      navigate(`/invoice/${savedInvoice.id}`);
+
+    } catch (error: any) {
+      console.error("Payment error:", error);
+      toast.error(`Payment error: ${error.message || 'Unknown error'}`);
+    } finally {
+      setProcessingPayment(false);
+    }
   };
 
   if (loading || loadingPlan) {
@@ -557,9 +588,22 @@ const CreateInvoice = () => {
             <div className="mt-6 flex space-x-4">
               {showPaymentGateway ? (
                 <>
-                  <Button className="bg-green-600 hover:bg-green-700" onClick={handleProceedToPayment}>
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Proceed to Payment (Lemon Squeezy)
+                  <Button 
+                    className="bg-green-600 hover:bg-green-700" 
+                    onClick={handleProceedToPayment}
+                    disabled={processingPayment}
+                  >
+                    {processingPayment ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Process Payment with Lemon Squeezy
+                      </>
+                    )}
                   </Button>
                   <Button variant="outline" onClick={() => setShowPaymentGateway(false)}>
                     Back to Invoice
@@ -571,7 +615,16 @@ const CreateInvoice = () => {
                   onClick={handleSaveInvoice}
                   disabled={submitting}
                 >
-                  {submitting ? 'Saving...' : isEditing ? 'Update Invoice' : 'Save Invoice'}
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : isEditing ? (
+                    'Update Invoice'
+                  ) : (
+                    'Save Invoice'
+                  )}
                 </Button>
               )}
             </div>

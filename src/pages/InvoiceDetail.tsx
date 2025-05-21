@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { supabase } from '@/integrations/supabase/client';
 import { InvoicePdfGenerator } from '@/components/InvoicePdfGenerator';
 import { toast } from 'sonner';
-import { ArrowLeft, Printer, File, Edit } from 'lucide-react';
+import { ArrowLeft, Printer, File, Edit, CreditCard, Loader2 } from 'lucide-react';
 import { getUserPlan } from '@/utils/subscriptionUtils';
 import { useQuery } from '@tanstack/react-query';
 
@@ -29,7 +29,7 @@ type Invoice = {
   discount_amount: number;
   total_amount: number;
   notes: string;
-  terms: string; // Added explicit terms field
+  terms: string;
   user_id: string;
   created_at: string;
 };
@@ -40,6 +40,7 @@ const InvoiceDetail = () => {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loadingInvoice, setLoadingInvoice] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   useEffect(() => {
     document.title = `Invoice Detail | BillFlow`;
@@ -103,6 +104,49 @@ const InvoiceDetail = () => {
     fetchInvoice();
   }, [id]);
 
+  const handleProceedToPayment = async () => {
+    if (!invoice) {
+      toast.error("No invoice data available for payment");
+      return;
+    }
+
+    try {
+      setProcessingPayment(true);
+      toast.info("Creating payment checkout...");
+
+      // Call our Supabase Edge Function to create a checkout
+      const response = await fetch(
+        "https://tqevlvoleqfbubapnubp.supabase.co/functions/v1/create-checkout",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${await supabase.auth.getSession().then(res => res.data.session?.access_token)}`
+          },
+          body: JSON.stringify({
+            invoiceData: invoice
+          })
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.url) {
+        throw new Error(result.error || "Failed to create checkout session");
+      }
+
+      // Open the Lemon Squeezy checkout URL in a new tab
+      toast.success("Redirecting to payment gateway...");
+      window.open(result.url, '_blank');
+
+    } catch (error: any) {
+      console.error("Payment error:", error);
+      toast.error(`Payment error: ${error.message || 'Unknown error'}`);
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
@@ -152,6 +196,23 @@ const InvoiceDetail = () => {
               </div>
               
               <div className="space-x-2">
+                <Button 
+                  className="bg-green-600 hover:bg-green-700" 
+                  onClick={handleProceedToPayment}
+                  disabled={processingPayment}
+                >
+                  {processingPayment ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Pay Invoice
+                    </>
+                  )}
+                </Button>
                 {userPlan !== 'free' && (
                   <Link to={`/create-invoice?invoiceId=${invoice.id}`}>
                     <Button variant="outline">
