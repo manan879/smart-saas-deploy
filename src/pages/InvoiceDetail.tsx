@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { supabase } from '@/integrations/supabase/client';
 import { InvoicePdfGenerator } from '@/components/InvoicePdfGenerator';
 import { toast } from 'sonner';
-import { ArrowLeft, Printer, Download, FileText, Edit, File } from 'lucide-react';
+import { ArrowLeft, Printer, File, Edit } from 'lucide-react';
 import { getUserPlan } from '@/utils/subscriptionUtils';
 import { useQuery } from '@tanstack/react-query';
 
@@ -29,7 +29,7 @@ type Invoice = {
   discount_amount: number;
   total_amount: number;
   notes: string;
-  terms: string;
+  terms: string; // Added explicit terms field
   user_id: string;
   created_at: string;
 };
@@ -87,7 +87,7 @@ const InvoiceDetail = () => {
           line_items: Array.isArray(data.items) ? data.items : [],
           discount_rate: 0,
           discount_amount: 0,
-          terms: data.terms || ''
+          terms: data.notes || '' // Using notes as terms since we don't have a dedicated terms field
         };
         
         setInvoice(invoice);

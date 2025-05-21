@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Plus, Trash } from 'lucide-react';
+import { Plus, Trash, CreditCard } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceLimitWarning } from '@/components/InvoiceLimitWarning';
@@ -27,6 +26,8 @@ const CreateInvoice = () => {
   const { user, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const invoiceId = searchParams.get('invoiceId');
   const templateId = location.state?.templateId;
 
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -46,6 +47,8 @@ const CreateInvoice = () => {
   const [submitting, setSubmitting] = useState(false);
   const [subtotal, setSubtotal] = useState<number>(0);
   const [totalAmount, setTotalAmount] = useState<number>(0);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showPaymentGateway, setShowPaymentGateway] = useState(false);
 
   // Get user's plan and invoice count
   const { data: userPlanData, isLoading: loadingPlan } = useQuery({
@@ -79,24 +82,69 @@ const CreateInvoice = () => {
       navigate('/auth');
     }
 
-    // Set default company name from user's email
-    if (user?.email) {
-      const domain = user.email.split('@')[1];
-      setCompanyName(domain);
-    }
+    // Fetch invoice data if editing an existing invoice
+    if (invoiceId && user) {
+      fetchInvoiceData(invoiceId);
+      setIsEditing(true);
+    } else {
+      // Set default company name from user's email
+      if (user?.email) {
+        const domain = user.email.split('@')[1];
+        setCompanyName(domain);
+      }
 
-    // Set default invoice date to today
-    const today = new Date().toISOString().split('T')[0];
-    setInvoiceDate(today);
+      // Set default invoice date to today
+      const today = new Date().toISOString().split('T')[0];
+      setInvoiceDate(today);
 
-    // Generate a random invoice number
-    setInvoiceNumber(generateInvoiceNumber());
-    
-    // If a template was selected, apply it
-    if (templateId) {
-      applyTemplate(templateId);
+      // Generate a random invoice number
+      setInvoiceNumber(generateInvoiceNumber());
+      
+      // If a template was selected, apply it
+      if (templateId) {
+        applyTemplate(templateId);
+      }
     }
-  }, [user, isAuthenticated, loading, navigate, templateId]);
+  }, [user, isAuthenticated, loading, navigate, templateId, invoiceId]);
+
+  const fetchInvoiceData = async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setInvoiceNumber(data.invoice_number);
+        setInvoiceDate(data.invoice_date);
+        setDueDate(data.due_date);
+        setCompanyName(data.company_name);
+        setCompanyAddress(data.company_address || '');
+        setCompanyEmail(data.company_email || '');
+        setCompanyPhone(data.company_phone || '');
+        setClientName(data.client_name);
+        setClientAddress(data.client_address || '');
+        setClientEmail(data.client_email || '');
+        setClientPhone(data.client_phone || '');
+        
+        // Parse items from JSON if needed
+        const invoiceItems = Array.isArray(data.items) ? data.items : 
+          (typeof data.items === 'string' ? JSON.parse(data.items) : []);
+        
+        setItems(invoiceItems.length > 0 ? invoiceItems : [{ id: uuidv4(), description: '', quantity: 1, price: 0 }]);
+        setTaxRate(data.tax_rate || 0);
+        setNotes(data.notes || '');
+      }
+    } catch (err: any) {
+      console.error('Error fetching invoice:', err);
+      toast.error('Failed to fetch invoice details');
+    }
+  };
 
   const applyTemplate = (template: string) => {
     // This is a placeholder function that would apply template-specific defaults
@@ -165,8 +213,8 @@ const CreateInvoice = () => {
       return;
     }
 
-    // Check if user can create more invoices
-    if (!canCreateMore) {
+    // Check if user can create more invoices (only for new invoices, not edits)
+    if (!isEditing && !canCreateMore) {
       toast.error(`You've reached your limit of ${PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS]} invoices for your ${userPlan} plan. Please upgrade to create more.`);
       navigate('/pricing');
       return;
@@ -200,21 +248,45 @@ const CreateInvoice = () => {
         notes: notes
       };
       
-      // Save to Supabase
-      const { data, error } = await supabase
-        .from('invoices')
-        .insert(invoiceData)
-        .select()
-        .single();
+      let data;
+      let error;
+      
+      if (isEditing) {
+        // Update existing invoice
+        const response = await supabase
+          .from('invoices')
+          .update(invoiceData)
+          .eq('id', invoiceId)
+          .select()
+          .single();
+          
+        data = response.data;
+        error = response.error;
+      } else {
+        // Create new invoice
+        const response = await supabase
+          .from('invoices')
+          .insert(invoiceData)
+          .select()
+          .single();
+          
+        data = response.data;
+        error = response.error;
+      }
       
       if (error) {
         throw error;
       }
       
-      toast.success("Invoice saved successfully!");
+      toast.success(isEditing ? "Invoice updated successfully!" : "Invoice saved successfully!");
       
-      // Redirect to the invoice detail page for the new invoice
-      navigate(`/invoice/${data.id}`);
+      // Show payment option after saving
+      if (data) {
+        setShowPaymentGateway(true);
+      } else {
+        // Redirect to the invoice detail page for the new invoice
+        navigate(`/invoice/${data.id}`);
+      }
       
     } catch (error: any) {
       console.error("Error saving invoice:", error);
@@ -222,6 +294,29 @@ const CreateInvoice = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleProceedToPayment = () => {
+    // Create Lemon Squeezy checkout session
+    const checkoutParams = {
+      invoiceNumber,
+      amount: totalAmount,
+      customerEmail: clientEmail,
+      customerName: clientName,
+      description: `Invoice #${invoiceNumber}`
+    };
+
+    // Redirect to a simulated Lemon Squeezy checkout
+    // In a real integration, you would use their API to create a checkout session
+    toast.success("Redirecting to payment gateway...");
+    
+    // This is a placeholder for the actual Lemon Squeezy integration
+    // Normally you would call their API and get a checkout URL
+    setTimeout(() => {
+      const lemonSqueezyUrl = `https://checkout.lemonsqueezy.com/checkout?invoice=${invoiceNumber}&amount=${totalAmount}`;
+      window.open(lemonSqueezyUrl, '_blank');
+      setShowPaymentGateway(false);
+    }, 1000);
   };
 
   if (loading || loadingPlan) {
@@ -245,7 +340,7 @@ const CreateInvoice = () => {
         
         <Card className="border-blue-500">
           <CardHeader className="bg-blue-500 text-white">
-            <CardTitle>Create New Invoice</CardTitle>
+            <CardTitle>{isEditing ? 'Edit Invoice' : 'Create New Invoice'}</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -459,14 +554,26 @@ const CreateInvoice = () => {
             </div>
 
             {/* Save Button */}
-            <div className="mt-6">
-              <Button
-                className="bg-blue-600 hover:bg-blue-700"
-                onClick={handleSaveInvoice}
-                disabled={submitting || !canCreateMore}
-              >
-                {submitting ? 'Saving...' : 'Save Invoice'}
-              </Button>
+            <div className="mt-6 flex space-x-4">
+              {showPaymentGateway ? (
+                <>
+                  <Button className="bg-green-600 hover:bg-green-700" onClick={handleProceedToPayment}>
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Proceed to Payment (Lemon Squeezy)
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowPaymentGateway(false)}>
+                    Back to Invoice
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={handleSaveInvoice}
+                  disabled={submitting}
+                >
+                  {submitting ? 'Saving...' : isEditing ? 'Update Invoice' : 'Save Invoice'}
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
