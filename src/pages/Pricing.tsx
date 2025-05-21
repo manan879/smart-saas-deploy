@@ -5,8 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { updateUserPlan } from '@/utils/subscriptionUtils';
 
 const PricingFeature = ({ children }: { children: React.ReactNode }) => (
   <div className="flex items-center space-x-2">
@@ -15,19 +17,53 @@ const PricingFeature = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
+// Checkout URLs for subscription plans
+const CHECKOUT_URLS = {
+  pro: "https://billflow77.lemonsqueezy.com/buy/509b430e-5c08-4e5f-aedd-285c99aef0ab",
+  elite: "https://billflow77.lemonsqueezy.com/buy/abcb2e1d-2562-478f-99cc-98f5823be58f"
+};
+
 const Pricing = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const [loadingPlan, setLoadingPlan] = React.useState<string | null>(null);
 
-  const handleSubscribe = (plan: string) => {
+  const handleSubscribe = async (plan: string) => {
     if (!isAuthenticated) {
       toast.error("Please log in to subscribe to a plan");
       navigate('/auth');
       return;
     }
     
-    // In a real app, this would redirect to a payment processor
-    toast.info(`This would connect to a payment gateway for the ${plan} plan. For now, consider yourself subscribed!`);
+    try {
+      setLoadingPlan(plan);
+      
+      // Get the correct checkout URL for the plan
+      const checkoutUrl = CHECKOUT_URLS[plan as keyof typeof CHECKOUT_URLS];
+      
+      if (!checkoutUrl) {
+        throw new Error("Invalid plan selected");
+      }
+
+      // For demo purposes, immediately update the user's plan
+      // In a production app, this would happen after webhook confirmation
+      await updateUserPlan(user!.id, plan);
+      
+      // Open the Lemon Squeezy checkout URL in a new tab
+      toast.success("Redirecting to payment gateway...");
+      window.open(checkoutUrl, '_blank');
+      
+      // Redirect to dashboard after a short delay
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
+      
+    } catch (error: any) {
+      console.error("Payment error:", error);
+      toast.error(`Payment error: ${error.message || 'Unknown error'}`);
+    } finally {
+      setLoadingPlan(null);
+    }
   };
 
   return (
@@ -93,8 +129,16 @@ const Pricing = () => {
               <Button 
                 className="w-full bg-blue-500 hover:bg-blue-600"
                 onClick={() => handleSubscribe('pro')}
+                disabled={loadingPlan === 'pro'}
               >
-                Subscribe to Pro
+                {loadingPlan === 'pro' ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Subscribe to Pro'
+                )}
               </Button>
             </CardFooter>
           </Card>
@@ -123,8 +167,16 @@ const Pricing = () => {
               <Button 
                 className="w-full bg-blue-500 hover:bg-blue-600"
                 onClick={() => handleSubscribe('elite')}
+                disabled={loadingPlan === 'elite'}
               >
-                Subscribe to Elite
+                {loadingPlan === 'elite' ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Subscribe to Elite'
+                )}
               </Button>
             </CardFooter>
           </Card>
