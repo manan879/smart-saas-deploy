@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { PLAN_LIMITS, getUserPlan, getRemainingInvoices } from '@/utils/subscriptionUtils';
+import { PLAN_LIMITS, getUserPlan } from '@/utils/subscriptionUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
@@ -16,7 +16,6 @@ export const PlanLimitChecker = ({ children }: PlanLimitCheckerProps) => {
   const navigate = useNavigate();
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [invoiceCount, setInvoiceCount] = useState(0);
-  const [remainingInvoices, setRemainingInvoices] = useState(0);
   const [userPlan, setUserPlan] = useState<string>('free');
   const [loading, setLoading] = useState(true);
   
@@ -39,16 +38,11 @@ export const PlanLimitChecker = ({ children }: PlanLimitCheckerProps) => {
         
         if (error) throw error;
         
-        const currentCount = count || 0;
-        setInvoiceCount(currentCount);
-        
-        // Calculate remaining invoices
-        const planLimit = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS];
-        const remaining = planLimit - currentCount;
-        setRemainingInvoices(remaining);
+        setInvoiceCount(count || 0);
         
         // Check if user has reached their plan limit
-        if (remaining <= 0) {
+        const planLimit = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS];
+        if (count !== null && count >= planLimit) {
           setShowLimitDialog(true);
         }
         

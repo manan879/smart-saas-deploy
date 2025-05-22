@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Maximum number of invoices allowed per plan
 export const PLAN_LIMITS = {
-  free: 5,  // Free plan limited to 5 invoices
+  free: 5,
   pro: 20,
   elite: 50
 };
@@ -47,65 +47,17 @@ export const canCreateMoreInvoices = async (userId: string, invoiceCount: number
   }
 };
 
-// Get remaining invoices user can create
-export const getRemainingInvoices = async (userId: string): Promise<number> => {
-  if (!userId) return 0;
-  
-  try {
-    // Get user's plan
-    const plan = await getUserPlan(userId);
-    const planLimit = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS];
-    
-    // Get current invoice count specific to this user
-    const { count, error } = await supabase
-      .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
-    
-    if (error) throw error;
-    
-    // Calculate remaining invoices
-    return planLimit - (count || 0);
-  } catch (error) {
-    console.error('Error calculating remaining invoices:', error);
-    return 0;
-  }
-};
-
 // Update user's subscription plan
 export const updateUserPlan = async (userId: string, plan: string): Promise<boolean> => {
   if (!userId) return false;
   
   try {
-    // First check if the user already has a subscription
-    const { data, error: fetchError } = await supabase
+    const { error } = await supabase
       .from('subscriptions')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
+      .update({ plan, updated_at: new Date().toISOString() })
+      .eq('user_id', userId);
     
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      // PGRST116 means not found, which is expected if user doesn't have a subscription yet
-      throw fetchError;
-    }
-    
-    if (data) {
-      // Update existing subscription
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({ plan, updated_at: new Date().toISOString() })
-        .eq('user_id', userId);
-      
-      if (error) throw error;
-    } else {
-      // Create new subscription
-      const { error } = await supabase
-        .from('subscriptions')
-        .insert({ user_id: userId, plan, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
-      
-      if (error) throw error;
-    }
-    
+    if (error) throw error;
     return true;
   } catch (error) {
     console.error('Error updating user plan:', error);
