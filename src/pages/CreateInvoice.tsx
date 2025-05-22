@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -12,7 +13,7 @@ import { Plus, Trash } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceLimitWarning } from '@/components/InvoiceLimitWarning';
-import { getUserPlan, PLAN_LIMITS } from '@/utils/subscriptionUtils';
+import { getUserPlan, PLAN_LIMITS, getRemainingInvoices } from '@/utils/subscriptionUtils';
 import { useQuery } from '@tanstack/react-query';
 
 type LineItem = {
@@ -42,6 +43,16 @@ const CreateInvoice = () => {
     queryFn: async () => {
       if (!user) return 'free';
       return getUserPlan(user.id);
+    },
+    enabled: !!user
+  });
+  
+  // Get remaining invoices
+  const { data: remainingInvoices = 0 } = useQuery({
+    queryKey: ['remainingInvoices', user?.id],
+    queryFn: async () => {
+      if (!user) return 0;
+      return getRemainingInvoices(user.id);
     },
     enabled: !!user
   });
@@ -119,22 +130,21 @@ const CreateInvoice = () => {
     try {
       const totalAmount = calculateTotal();
       
+      // Fixed the insert format - removed the array wrapper since we're only inserting one invoice
       const { data, error } = await supabase
         .from('invoices')
-        .insert([
-          {
-            user_id: user.id,
-            invoice_number: invoiceNumber,
-            invoice_date: invoiceDate,
-            due_date: dueDate,
-            client_name: clientName,
-            client_email: clientEmail,
-            line_items: lineItems,
-            notes: notes,
-            terms: terms,
-            total_amount: totalAmount,
-          },
-        ]);
+        .insert({
+          user_id: user.id,
+          invoice_number: invoiceNumber,
+          invoice_date: invoiceDate,
+          due_date: dueDate,
+          client_name: clientName,
+          client_email: clientEmail,
+          items: lineItems, // Storing as JSONB in the database
+          notes: notes,
+          terms: terms,
+          total_amount: totalAmount,
+        });
 
       if (error) {
         console.error('Error creating invoice:', error);
@@ -168,7 +178,7 @@ const CreateInvoice = () => {
         <InvoiceLimitWarning 
           currentPlan={userPlan} 
           invoiceCount={invoiceCount} 
-          remainingInvoices={planLimit - invoiceCount} 
+          remainingInvoices={remainingInvoices} 
         />
         
         <Card>

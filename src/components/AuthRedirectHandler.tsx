@@ -26,11 +26,16 @@ const AuthRedirectHandler = () => {
       }
     });
 
+    // If user is already authenticated on component mount, redirect to dashboard
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+
     // Clean up subscription on unmount
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, isAuthenticated]);
 
   // Component doesn't render anything
   return null;

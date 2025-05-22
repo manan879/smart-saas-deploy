@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Maximum number of invoices allowed per plan
 export const PLAN_LIMITS = {
-  free: 5,  // Changed from 10 to 5 as per user's request
+  free: 5,  // Free plan limited to 5 invoices
   pro: 20,
   elite: 50
 };
@@ -56,7 +56,7 @@ export const getRemainingInvoices = async (userId: string): Promise<number> => {
     const plan = await getUserPlan(userId);
     const planLimit = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS];
     
-    // Get current invoice count
+    // Get current invoice count specific to this user
     const { count, error } = await supabase
       .from('invoices')
       .select('*', { count: 'exact', head: true })
@@ -101,7 +101,7 @@ export const updateUserPlan = async (userId: string, plan: string): Promise<bool
       // Create new subscription
       const { error } = await supabase
         .from('subscriptions')
-        .insert([{ user_id: userId, plan, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
+        .insert({ user_id: userId, plan, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
       
       if (error) throw error;
     }
