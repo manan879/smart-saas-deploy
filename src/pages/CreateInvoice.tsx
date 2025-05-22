@@ -4,24 +4,17 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Plus, Trash } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceLimitWarning } from '@/components/InvoiceLimitWarning';
 import { getUserPlan, PLAN_LIMITS, getRemainingInvoices } from '@/utils/subscriptionUtils';
 import { useQuery } from '@tanstack/react-query';
-
-type LineItem = {
-  id: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-};
+import { LineItemForm, LineItem } from '@/components/invoice/LineItemForm';
+import { ClientInfoForm } from '@/components/invoice/ClientInfoForm';
+import { InvoiceDetailsForm } from '@/components/invoice/InvoiceDetailsForm';
+import { InvoiceNotesForm } from '@/components/invoice/InvoiceNotesForm';
+import { generateInvoiceNumber, calculateTotal, createEmptyLineItem } from '@/utils/invoiceUtils';
 
 const CreateInvoice = () => {
   const { isAuthenticated, loading, user } = useAuth();
@@ -32,7 +25,7 @@ const CreateInvoice = () => {
   const [dueDate, setDueDate] = useState<string>('');
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
-  const [lineItems, setLineItems] = useState<LineItem[]>([{ id: uuidv4(), description: '', quantity: 1, unitPrice: 0 }]);
+  const [lineItems, setLineItems] = useState<LineItem[]>([createEmptyLineItem()]);
   const [notes, setNotes] = useState('');
   const [terms, setTerms] = useState('');
   const [invoiceCount, setInvoiceCount] = useState(0);
@@ -90,14 +83,8 @@ const CreateInvoice = () => {
     fetchInvoiceCount();
   }, [isAuthenticated, loading, navigate, user]);
 
-  const generateInvoiceNumber = () => {
-    const prefix = 'INV';
-    const randomNumber = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `${prefix}-${randomNumber}`;
-  };
-
   const addLineItem = () => {
-    setLineItems([...lineItems, { id: uuidv4(), description: '', quantity: 1, unitPrice: 0 }]);
+    setLineItems([...lineItems, createEmptyLineItem()]);
   };
 
   const updateLineItem = (id: string, field: string, value: string | number) => {
@@ -108,10 +95,6 @@ const CreateInvoice = () => {
 
   const removeLineItem = (id: string) => {
     setLineItems(lineItems.filter(item => item.id !== id));
-  };
-
-  const calculateTotal = () => {
-    return lineItems.reduce((total, item) => total + (item.quantity * item.unitPrice), 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,9 +111,8 @@ const CreateInvoice = () => {
     }
 
     try {
-      const totalAmount = calculateTotal();
+      const totalAmount = calculateTotal(lineItems);
       
-      // Fixed the insert format - removed the array wrapper since we're only inserting one invoice
       const { data, error } = await supabase
         .from('invoices')
         .insert({
@@ -142,7 +124,6 @@ const CreateInvoice = () => {
           client_email: clientEmail,
           items: lineItems, // Storing as JSONB in the database
           notes: notes,
-          terms: terms,
           total_amount: totalAmount,
         });
 
@@ -184,130 +165,37 @@ const CreateInvoice = () => {
         <Card>
           <CardContent>
             <form onSubmit={handleSubmit} className="grid gap-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="invoiceNumber">Invoice Number</Label>
-                  <Input
-                    type="text"
-                    id="invoiceNumber"
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                    readOnly
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="invoiceDate">Invoice Date</Label>
-                  <Input
-                    type="date"
-                    id="invoiceDate"
-                    value={invoiceDate}
-                    onChange={(e) => setInvoiceDate(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="dueDate">Due Date</Label>
-                  <Input
-                    type="date"
-                    id="dueDate"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
+              <InvoiceDetailsForm
+                invoiceNumber={invoiceNumber}
+                invoiceDate={invoiceDate}
+                setInvoiceDate={setInvoiceDate}
+                dueDate={dueDate}
+                setDueDate={setDueDate}
+              />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="clientName">Client Name</Label>
-                  <Input
-                    type="text"
-                    id="clientName"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="clientEmail">Client Email</Label>
-                  <Input
-                    type="email"
-                    id="clientEmail"
-                    value={clientEmail}
-                    onChange={(e) => setClientEmail(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
+              <ClientInfoForm
+                clientName={clientName}
+                setClientName={setClientName}
+                clientEmail={clientEmail}
+                setClientEmail={setClientEmail}
+              />
+
+              <LineItemForm
+                lineItems={lineItems}
+                updateLineItem={updateLineItem}
+                removeLineItem={removeLineItem}
+                addLineItem={addLineItem}
+              />
+
+              <InvoiceNotesForm
+                notes={notes}
+                setNotes={setNotes}
+                terms={terms}
+                setTerms={setTerms}
+              />
 
               <div>
-                <Label>Line Items</Label>
-                {lineItems.map((item, index) => (
-                  <div key={item.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                    <div>
-                      <Label htmlFor={`description-${item.id}`}>Description</Label>
-                      <Input
-                        type="text"
-                        id={`description-${item.id}`}
-                        value={item.description}
-                        onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`quantity-${item.id}`}>Quantity</Label>
-                      <Input
-                        type="number"
-                        id={`quantity-${item.id}`}
-                        value={item.quantity}
-                        onChange={(e) => updateLineItem(item.id, 'quantity', Number(e.target.value))}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`unitPrice-${item.id}`}>Unit Price</Label>
-                      <Input
-                        type="number"
-                        id={`unitPrice-${item.id}`}
-                        value={item.unitPrice}
-                        onChange={(e) => updateLineItem(item.id, 'unitPrice', Number(e.target.value))}
-                        required
-                      />
-                    </div>
-                    <div className="flex items-end">
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeLineItem(item.id)}>
-                        <Trash className="h-4 w-4 mr-2" />
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                <Button type="button" variant="secondary" size="sm" onClick={addLineItem}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Line Item
-                </Button>
-              </div>
-
-              <div>
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="terms">Terms & Conditions</Label>
-                <Textarea
-                  id="terms"
-                  value={terms}
-                  onChange={(e) => setTerms(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <p className="text-xl font-bold">Total: ${calculateTotal().toFixed(2)}</p>
+                <p className="text-xl font-bold">Total: ${calculateTotal(lineItems).toFixed(2)}</p>
               </div>
 
               <Button type="submit" className="bg-billflow-600 hover:bg-billflow-700">
