@@ -5,11 +5,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { InvoiceLimitWarning } from '@/components/InvoiceLimitWarning';
+import { getUserPlan, PLAN_LIMITS } from '@/utils/subscriptionUtils';
 
 type DashboardStats = {
   totalInvoices: number;
   paidInvoices: number;
   outstandingAmount: number;
+  remainingInvoices: number;
+  currentPlan: string;
 };
 
 export const DashboardStats = () => {
@@ -22,10 +26,17 @@ export const DashboardStats = () => {
         return {
           totalInvoices: 0,
           paidInvoices: 0,
-          outstandingAmount: 0
+          outstandingAmount: 0,
+          remainingInvoices: 0,
+          currentPlan: 'free'
         };
       }
       
+      // Get user's plan
+      const currentPlan = await getUserPlan(user.id);
+      const planLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS];
+      
+      // Fetch invoices
       const { data: invoices, error } = await supabase
         .from('invoices')
         .select('*')
@@ -37,7 +48,9 @@ export const DashboardStats = () => {
         return {
           totalInvoices: 0,
           paidInvoices: 0,
-          outstandingAmount: 0
+          outstandingAmount: 0,
+          remainingInvoices: planLimit,
+          currentPlan
         };
       }
       
@@ -52,10 +65,15 @@ export const DashboardStats = () => {
         .filter(inv => new Date(inv.due_date) >= new Date())
         .reduce((sum, inv) => sum + Number(inv.total_amount), 0);
       
+      // Calculate remaining invoices
+      const remainingInvoices = planLimit - total;
+      
       return {
         totalInvoices: total,
         paidInvoices: paid,
-        outstandingAmount: outstanding
+        outstandingAmount: outstanding,
+        remainingInvoices,
+        currentPlan
       };
     },
     enabled: !!user
@@ -81,33 +99,50 @@ export const DashboardStats = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-500">Total Invoices</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold">{stats?.totalInvoices || 0}</div>
-        </CardContent>
-      </Card>
+    <>
+      {stats && <InvoiceLimitWarning 
+        currentPlan={stats.currentPlan} 
+        invoiceCount={stats.totalInvoices} 
+        remainingInvoices={stats.remainingInvoices} 
+      />}
       
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-500">Outstanding Amount</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold">${(stats?.outstandingAmount || 0).toFixed(2)}</div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-500">Paid Invoices</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold">{stats?.paidInvoices || 0}</div>
-        </CardContent>
-      </Card>
-    </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Total Invoices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats?.totalInvoices || 0}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Outstanding Amount</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">${(stats?.outstandingAmount || 0).toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Paid Invoices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats?.paidInvoices || 0}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Remaining Invoices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats?.remainingInvoices || 0}</div>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 };
