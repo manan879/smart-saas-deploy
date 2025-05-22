@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -12,7 +13,7 @@ import { Plus, Trash, CreditCard, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceLimitWarning } from '@/components/InvoiceLimitWarning';
-import { getUserPlan, canCreateMoreInvoices, PLAN_LIMITS } from '@/utils/subscriptionUtils';
+import { getUserPlan, getRemainingInvoices, canCreateMoreInvoices, PLAN_LIMITS } from '@/utils/subscriptionUtils';
 import { useQuery } from '@tanstack/react-query';
 
 type InvoiceItem = {
@@ -56,7 +57,7 @@ const CreateInvoice = () => {
   const { data: userPlanData, isLoading: loadingPlan } = useQuery({
     queryKey: ['userPlan', user?.id],
     queryFn: async () => {
-      if (!user) return { plan: 'free', invoiceCount: 0, canCreate: false };
+      if (!user) return { plan: 'free', invoiceCount: 0, canCreate: false, remainingInvoices: 0 };
       
       const plan = await getUserPlan(user.id);
       
@@ -69,8 +70,9 @@ const CreateInvoice = () => {
       
       const invoiceCount = count || 0;
       const canCreate = await canCreateMoreInvoices(user.id, invoiceCount);
+      const remainingInvoices = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS] - invoiceCount;
       
-      return { plan, invoiceCount, canCreate };
+      return { plan, invoiceCount, canCreate, remainingInvoices };
     },
     enabled: !!user
   });
@@ -78,10 +80,12 @@ const CreateInvoice = () => {
   const userPlan = userPlanData?.plan || 'free';
   const invoiceCount = userPlanData?.invoiceCount || 0;
   const canCreateMore = userPlanData?.canCreate || false;
+  const remainingInvoices = userPlanData?.remainingInvoices || 0;
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       navigate('/auth');
+      return;
     }
 
     // Fetch invoice data if editing an existing invoice
@@ -199,7 +203,7 @@ const CreateInvoice = () => {
     setTotalAmount(calculatedSubtotal + taxAmount);
   }, [items, taxRate]);
 
-  const serializeInvoiceItems = (items: InvoiceItem[]) => {
+  const serializeInvoiceItems = (items: InvoiceItem[]): string => {
     return JSON.stringify(items.map(item => ({
       id: item.id,
       description: item.description,
@@ -365,7 +369,8 @@ const CreateInvoice = () => {
         {userPlanData && (
           <InvoiceLimitWarning 
             currentPlan={userPlan} 
-            invoiceCount={invoiceCount} 
+            invoiceCount={invoiceCount}
+            remainingInvoices={remainingInvoices}
           />
         )}
         

@@ -72,6 +72,25 @@ export const getRemainingInvoices = async (userId: string): Promise<number> => {
   }
 };
 
+// Check if a user already has invoices
+export const userHasInvoices = async (userId: string): Promise<boolean> => {
+  if (!userId) return false;
+  
+  try {
+    const { count, error } = await supabase
+      .from('invoices')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    
+    return (count || 0) > 0;
+  } catch (error) {
+    console.error('Error checking if user has invoices:', error);
+    return false;
+  }
+};
+
 // Update user's subscription plan
 export const updateUserPlan = async (userId: string, plan: string): Promise<boolean> => {
   if (!userId) return false;
