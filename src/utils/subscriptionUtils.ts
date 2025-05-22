@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Maximum number of invoices allowed per plan
 export const PLAN_LIMITS = {
-  free: 5,
+  free: 5,  // Changed from 10 to 5 as per user's request
   pro: 20,
   elite: 50
 };
