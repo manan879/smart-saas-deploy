@@ -15,7 +15,8 @@ type InvoiceLimitWarningProps = {
 export const InvoiceLimitWarning = ({ currentPlan, invoiceCount, remainingInvoices }: InvoiceLimitWarningProps) => {
   const planLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS];
   
-  if (remainingInvoices <= 0) {
+  // Special case for when remainingInvoices is exactly 0
+  if (remainingInvoices <= 0 && invoiceCount > 0) {
     return (
       <Alert variant="destructive" className="mb-6">
         <AlertCircle className="h-4 w-4" />
@@ -27,6 +28,19 @@ export const InvoiceLimitWarning = ({ currentPlan, invoiceCount, remainingInvoic
               Upgrade Plan
             </Button>
           </Link>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  
+  // Special case for when user has no invoices yet
+  if (invoiceCount === 0) {
+    return (
+      <Alert className="mb-6 border-blue-500">
+        <AlertCircle className="h-4 w-4 text-blue-500" />
+        <AlertTitle className="text-blue-500">Welcome to BillFlow!</AlertTitle>
+        <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <span>You have {planLimit} invoices available on your {currentPlan} plan. Get started by creating your first invoice.</span>
         </AlertDescription>
       </Alert>
     );

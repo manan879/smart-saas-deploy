@@ -47,8 +47,8 @@ export const PlanLimitChecker = ({ children }: PlanLimitCheckerProps) => {
         const remaining = planLimit - currentCount;
         setRemainingInvoices(remaining);
         
-        // Check if user has reached their plan limit
-        if (remaining <= 0) {
+        // Check if user has reached their plan limit - but only if they have at least one invoice
+        if (remaining <= 0 && currentCount > 0) {
           setShowLimitDialog(true);
         }
         

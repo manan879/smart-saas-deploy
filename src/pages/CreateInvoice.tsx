@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -69,7 +68,9 @@ const CreateInvoice = () => {
       if (error) throw error;
       
       const invoiceCount = count || 0;
-      const canCreate = await canCreateMoreInvoices(user.id, invoiceCount);
+      
+      // Always allow users with 0 invoices to create at least one
+      const canCreate = invoiceCount === 0 ? true : await canCreateMoreInvoices(user.id, invoiceCount);
       const remainingInvoices = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS] - invoiceCount;
       
       return { plan, invoiceCount, canCreate, remainingInvoices };
@@ -220,7 +221,8 @@ const CreateInvoice = () => {
     }
 
     // Check if user can create more invoices (only for new invoices, not edits)
-    if (!isEditing && !canCreateMore) {
+    // Always allow users with 0 invoices to create at least one invoice
+    if (!isEditing && !userPlanData?.canCreate && userPlanData?.invoiceCount > 0) {
       toast.error(`You've reached your limit of ${PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS]} invoices for your ${userPlan} plan. Please upgrade to create more.`);
       navigate('/pricing');
       return;

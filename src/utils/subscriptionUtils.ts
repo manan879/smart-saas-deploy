@@ -40,7 +40,12 @@ export const canCreateMoreInvoices = async (userId: string, invoiceCount: number
   
   try {
     const plan = await getUserPlan(userId);
-    return invoiceCount < PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS];
+    const planLimit = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS];
+    
+    // If invoice count is 0, always allow creating invoices
+    if (invoiceCount === 0) return true;
+    
+    return invoiceCount < planLimit;
   } catch (error) {
     console.error('Error checking invoice limit:', error);
     return false;
@@ -64,8 +69,11 @@ export const getRemainingInvoices = async (userId: string): Promise<number> => {
     
     if (error) throw error;
     
+    // If user has no invoices yet, return the full plan limit
+    const currentCount = count || 0;
+    
     // Calculate remaining invoices
-    return planLimit - (count || 0);
+    return planLimit - currentCount;
   } catch (error) {
     console.error('Error calculating remaining invoices:', error);
     return 0;

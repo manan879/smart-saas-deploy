@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 
 const AuthRedirectHandler = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   useEffect(() => {
     // Set up listener for auth state changes

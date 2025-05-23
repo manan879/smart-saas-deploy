@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -49,7 +49,7 @@ export const DashboardStats = () => {
           totalInvoices: 0,
           paidInvoices: 0,
           outstandingAmount: 0,
-          remainingInvoices: planLimit,
+          remainingInvoices: planLimit, // Full limit for new users
           currentPlan
         };
       }
