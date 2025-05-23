@@ -65,7 +65,7 @@ export const DashboardStats = () => {
         .filter(inv => new Date(inv.due_date) >= new Date())
         .reduce((sum, inv) => sum + Number(inv.total_amount), 0);
       
-      // Calculate remaining invoices
+      // Calculate remaining invoices - include all existing invoices
       const remainingInvoices = planLimit - total;
       
       return {
@@ -139,7 +139,7 @@ export const DashboardStats = () => {
             <CardTitle className="text-sm font-medium text-gray-500">Remaining Invoices</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats?.remainingInvoices || 0}</div>
+            <div className="text-3xl font-bold">{Math.max(0, stats?.remainingInvoices || 0)}</div>
           </CardContent>
         </Card>
       </div>

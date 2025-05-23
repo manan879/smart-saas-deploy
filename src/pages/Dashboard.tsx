@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
@@ -19,110 +18,9 @@ const Dashboard = () => {
   const { isAuthenticated, loading, user } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
+  React.useEffect(() => {
     document.title = 'Dashboard | BillFlow';
-    
-    // Check if the user needs sample invoices
-    const checkAndCreateSampleInvoices = async () => {
-      if (!user) return;
-      
-      try {
-        // Check if user already has invoices
-        const hasInvoices = await userHasInvoices(user.id);
-        
-        // If no invoices, create sample ones
-        if (!hasInvoices) {
-          // Sample invoice data
-          const sampleInvoices = [
-            {
-              user_id: user.id,
-              invoice_number: 'INV-001',
-              invoice_date: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-              due_date: new Date(new Date().setDate(new Date().getDate() - 15)).toISOString().split('T')[0],
-              company_name: 'Your Company',
-              company_address: '123 Business Street',
-              company_email: 'your@company.com',
-              company_phone: '555-123-4567',
-              client_name: 'Acme Corporation',
-              client_address: '789 Client Avenue',
-              client_email: 'client@acme.com',
-              client_phone: '555-987-6543',
-              items: JSON.stringify([
-                { id: '1', description: 'Website Design', quantity: 1, price: 1000 },
-                { id: '2', description: 'Content Creation', quantity: 5, price: 100 }
-              ]),
-              subtotal: 1500,
-              tax_rate: 10,
-              tax_amount: 150,
-              total_amount: 1650,
-              notes: 'Payment received. Thank you!'
-            },
-            {
-              user_id: user.id,
-              invoice_number: 'INV-002',
-              invoice_date: new Date(new Date().setDate(new Date().getDate() - 15)).toISOString().split('T')[0],
-              due_date: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString().split('T')[0],
-              company_name: 'Your Company',
-              company_address: '123 Business Street',
-              company_email: 'your@company.com',
-              company_phone: '555-123-4567',
-              client_name: 'TechStart Inc.',
-              client_address: '456 Tech Boulevard',
-              client_email: 'finance@techstart.com',
-              client_phone: '555-456-7890',
-              items: JSON.stringify([
-                { id: '1', description: 'App Development', quantity: 1, price: 2500 },
-                { id: '2', description: 'Maintenance Fee', quantity: 1, price: 300 }
-              ]),
-              subtotal: 2800,
-              tax_rate: 10,
-              tax_amount: 280,
-              total_amount: 3080,
-              notes: 'Payment due in 15 days'
-            },
-            {
-              user_id: user.id,
-              invoice_number: 'INV-003',
-              invoice_date: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString().split('T')[0],
-              due_date: new Date(new Date().setDate(new Date().getDate() + 25)).toISOString().split('T')[0],
-              company_name: 'Your Company',
-              company_address: '123 Business Street',
-              company_email: 'your@company.com',
-              company_phone: '555-123-4567',
-              client_name: 'GlobalTrade Ltd.',
-              client_address: '321 Commerce Street',
-              client_email: 'accounting@globaltrade.com',
-              client_phone: '555-789-0123',
-              items: JSON.stringify([
-                { id: '1', description: 'Marketing Consultation', quantity: 3, price: 400 },
-                { id: '2', description: 'Strategic Plan Development', quantity: 1, price: 800 }
-              ]),
-              subtotal: 2000,
-              tax_rate: 10,
-              tax_amount: 200,
-              total_amount: 2200,
-              notes: 'Payment due in 25 days'
-            }
-          ];
-          
-          // Insert sample invoices
-          const { error } = await supabase.from('invoices').insert(sampleInvoices);
-          
-          if (error) {
-            console.error('Error creating sample invoices:', error);
-          } else {
-            console.log('Sample invoices created successfully');
-          }
-        }
-      } catch (error) {
-        console.error('Error in sample invoice creation:', error);
-      }
-    };
-    
-    if (user && !loading) {
-      checkAndCreateSampleInvoices();
-    }
-  }, [user, loading]);
+  }, []);
 
   // Get user's plan
   const { data: userPlan = 'free', isLoading: loadingPlan } = useQuery({
